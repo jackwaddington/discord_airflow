@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.local
+config.yaml
+
+# Airflow runtime
+logs/
+airflow.db
+airflow.cfg
+standalone_admin_password.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Discord data (never commit real data)
+reports/*.md
+collectors/exports/
+collectors/bin/
+
+# macOS
+.DS_Store

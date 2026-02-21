@@ -1,0 +1,8 @@
+These Discord messages discuss {topic}.
+Identify any technical claims and fact-check them.
+Note: If unsure, say "uncertain" rather than guessing.
+
+Messages:
+{messages}
+
+Fact-check:

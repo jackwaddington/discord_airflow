@@ -1,0 +1,46 @@
+# DiscordChatExporter Configuration
+#
+# Copy this file to config.yaml and fill in your values.
+# config.yaml is gitignored — never commit it (it contains your Discord token).
+#
+# Secrets can be provided as ${ENV_VAR} or ${ENV_VAR:default}.
+# See .env.example for environment variable names.
+
+discord:
+  # Your personal Discord token (NOT a bot token).
+  # See docs/setup-discord-token.md for how to get this.
+  token: ${DISCORD_TOKEN}
+
+  # Server (guild) IDs to export.
+  # Right-click a server in Discord (Developer Mode on) → "Copy Server ID".
+  guilds:
+    - 123456789012345678
+    - 987654321098765432
+
+  # (Optional) Export only specific channels instead of whole guilds.
+  # Leave empty to export all text channels in each guild above.
+  channels: []
+  # channels:
+  #   - 111111111111111111
+
+# Exporter settings
+exporter:
+  # Where exported JSON files are saved.
+  output_directory: ./exports
+
+  # Only export messages after this date (ISO 8601: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS).
+  # Leave blank to export all history.
+  after_date: ""
+  # after_date: "2024-01-01"
+
+# Database (PostgreSQL)
+database:
+  host: ${DB_HOST:localhost}
+  port: ${DB_PORT:5432}
+  name: ${DB_NAME:discord_data}
+  user: ${DB_USER:discord_user}
+  password: ${DB_PASSWORD}
+
+# Logging
+logging:
+  level: ${LOG_LEVEL:INFO}

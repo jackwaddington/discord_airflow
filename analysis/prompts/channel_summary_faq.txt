@@ -1,0 +1,8 @@
+From these Discord messages in #{channel}, extract common questions and answers.
+Format as FAQ (Q&A format).
+Focus on technical questions and solutions.
+
+Messages:
+{messages}
+
+FAQ:
