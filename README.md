@@ -2,6 +2,8 @@
 
 Automated Discord community intelligence using Apache Airflow. Collects message history from Discord servers, computes weekly activity statistics, and (optionally) generates LLM summaries — all orchestrated as a scheduled pipeline with a web UI for monitoring.
 
+The LLM aspect is interesting - a bit like a human it is quite accurate most of the time. However, when your friend starts talking like they are an authority on the proposed Helsinki-Tallinn tunnel... 🤔 That's were we need to fact-check. 
+
 ---
 
 ## Architecture
