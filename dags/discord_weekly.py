@@ -5,12 +5,16 @@ Runs every Sunday at 09:00 and produces a markdown stats report
 covering the previous 7 days across all Discord servers.
 
 Tasks:
-    compute_stats  — queries PostgreSQL for activity metrics
-    save_report    — writes results to reports/YYYY-MM-DD.md
+    compute_stats   — activity metrics for the current period
+    compute_trends  — posts + unique users per week for last 8 weeks
+    save_report     — combines both into reports/YYYY-MM-DD.md
 
-No LLM involved — these are pure SQL numbers, always reliable.
+Tasks run in parallel:
+    compute_stats ──┐
+                    ├──► save_report
+    compute_trends ─┘
 
-Trigger manually in the Airflow UI, or wait for Sunday 09:00.
+No LLM involved — pure SQL, always reliable.
 """
 
 import json
@@ -56,7 +60,9 @@ def compute_stats(**context) -> dict:
         f"password={os.getenv('DB_PASSWORD', '')}"
     )
 
-    days = int(context["dag_run"].conf.get("days", 7))
+    conf = context["dag_run"].conf or {}
+    days = int(conf.get("days", 7))
+    server_id_filter = conf.get("server_id")  # optional: restrict to one server
 
     conn = psycopg2.connect(dsn)
     conn.autocommit = True
@@ -67,8 +73,10 @@ def compute_stats(**context) -> dict:
             return [dict(r) for r in cur.fetchall()]
 
     # Overall stats per server
+    filter_clause = "AND s.server_id = %s" if server_id_filter else ""
+    filter_params = (days, server_id_filter) if server_id_filter else (days,)
     server_stats = q(
-        """
+        f"""
         SELECT
             s.server_id,
             s.server_name,
@@ -83,10 +91,11 @@ def compute_stats(**context) -> dict:
             ON s.server_id = m.server_id
             AND m.created_at > NOW() - (%s * INTERVAL '1 day')
             AND m.is_deleted = false
+        WHERE 1=1 {filter_clause}
         GROUP BY s.server_id, s.server_name
         ORDER BY total_messages DESC
         """,
-        (days,),
+        filter_params,
     )
 
     results = {}
@@ -160,11 +169,69 @@ def compute_stats(**context) -> dict:
     return results
 
 
+def compute_trends(**context) -> dict:
+    """
+    Query weekly post counts and unique users per server for the last 8 weeks.
+
+    Pushed to XCom so save_report can include a trends table.
+    """
+    import psycopg2
+    import psycopg2.extras
+
+    dsn = (
+        f"host={os.getenv('DB_HOST', 'host.docker.internal')} "
+        f"port={os.getenv('DB_PORT', '5432')} "
+        f"dbname={os.getenv('DB_NAME', 'discord_data')} "
+        f"user={os.getenv('DB_USER', 'discord_user')} "
+        f"password={os.getenv('DB_PASSWORD', '')}"
+    )
+
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = True
+
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT
+                s.server_name,
+                DATE_TRUNC('week', m.created_at)::date AS week,
+                COUNT(*)                               AS posts,
+                COUNT(DISTINCT m.user_id)              AS unique_users
+            FROM messages m
+            JOIN servers s USING (server_id)
+            WHERE m.is_deleted = false
+              AND m.created_at > NOW() - (8 * INTERVAL '1 week')
+            GROUP BY s.server_name, week
+            ORDER BY s.server_name, week DESC
+            """
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+
+    conn.close()
+
+    # Group by server name
+    trends: dict[str, list] = {}
+    for row in rows:
+        name = row["server_name"]
+        if name not in trends:
+            trends[name] = []
+        trends[name].append({
+            "week": str(row["week"]),
+            "posts": row["posts"],
+            "unique_users": row["unique_users"],
+        })
+
+    context["ti"].xcom_push(key="trends", value=trends)
+    print(f"Trends computed for {len(trends)} servers")
+    return trends
+
+
 def save_report(**context) -> None:
     """
     Pull stats from XCom and write a markdown report to reports/.
     """
     stats = context["ti"].xcom_pull(task_ids="compute_stats", key="stats")
+    trends = context["ti"].xcom_pull(task_ids="compute_trends", key="trends") or {}
     if not stats:
         raise ValueError("No stats received from compute_stats task")
 
@@ -206,6 +273,16 @@ def save_report(**context) -> None:
                 lines.append(f"- #{c['channel']} — {c['messages']} messages")
             lines.append("")
 
+        # Trends table — last 8 weeks
+        server_trends = trends.get(server_name, [])
+        if server_trends:
+            lines.append("\n**Weekly trend (last 8 weeks):**\n")
+            lines.append("| Week | Posts | Unique users |")
+            lines.append("| ---- | ----- | ------------ |")
+            for t in server_trends:
+                lines.append(f"| {t['week']} | {t['posts']} | {t['unique_users']} |")
+            lines.append("")
+
     report = "\n".join(lines)
 
     output_dir = Path("/opt/airflow/reports")
@@ -227,7 +304,7 @@ with DAG(
     schedule="0 9 * * 0",   # Every Sunday at 09:00
     catchup=False,
     tags=["discord", "stats"],
-    params={"days": 7},     # Override via UI: Trigger DAG → Conf → {"days": 14}
+    params={"days": 7, "server_id": ""},  # e.g. {"days": 14, "server_id": "1474024565419147317"}
 ) as dag:
 
     t1 = PythonOperator(
@@ -236,9 +313,14 @@ with DAG(
     )
 
     t2 = PythonOperator(
+        task_id="compute_trends",
+        python_callable=compute_trends,
+    )
+
+    t3 = PythonOperator(
         task_id="save_report",
         python_callable=save_report,
     )
 
-    # compute_stats must finish before save_report starts
-    t1 >> t2
+    # stats and trends run in parallel, save_report waits for both
+    [t1, t2] >> t3
