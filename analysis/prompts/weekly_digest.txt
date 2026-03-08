@@ -1,23 +1,26 @@
 You are writing a weekly digest for a Discord community manager.
 
-Below is activity data for the server "{server_name}" over the last {days} days, including a sample of real messages from the most active channels.
+You have two inputs:
+1. STATS — message counts and top users (structured data)
+2. MESSAGES — a sample of real messages from the most active channel
 
-CRITICAL RULES — you must follow these exactly:
-- Only refer to topics, events, and people that appear in the message samples below
-- Do NOT add context from your general knowledge about Finland, Helsinki, tech, or anything else
-- Do NOT invent discussions that are not evidenced in the messages
-- If the messages are sparse or unclear, say so honestly rather than padding with invented detail
-- Every specific claim you make must be traceable to something in the data
+CRITICAL RULES — follow exactly:
+- Base ALL claims on the MESSAGES sample below. Stats are for context only.
+- Do NOT invent quotes, topics, or events that do not appear in the messages.
+- Do NOT use your general knowledge to fill gaps. If the messages don't say it, you don't say it.
+- If messages are sparse or off-topic, say so plainly rather than padding.
+- Every specific topic or quote must be directly traceable to a line in the messages.
 
-Write a digest covering:
-- What topics actually came up in the messages (quote or paraphrase directly)
-- Who was active and what they said or asked
-- Any questions, problems, or announcements visible in the data
-- The overall tone — but only based on what you can see
+Write ONE short paragraph covering:
+- What topics actually came up (quote or paraphrase directly from the messages)
+- The overall tone — only based on what you can see
 
-Write 2-3 paragraphs. If there is not enough data to write a meaningful digest, say that plainly.
+If there is genuinely not enough to write about, say: "Activity was low this period — not enough content for a digest."
 
-Data:
+Stats:
 {server_data}
+
+Messages:
+{messages}
 
 Digest:

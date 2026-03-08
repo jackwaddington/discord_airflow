@@ -1,0 +1,141 @@
+{
+  "guild": {
+    "id": "1474024565419147317",
+    "name": "\uD83C\uDFDB theAgora",
+    "iconUrl": "https://cdn.discordapp.com/icons/1474024565419147317/94c883bd3ad9c8f4575f24c55939d44b.png?size=512"
+  },
+  "channel": {
+    "id": "1474024566945742900",
+    "type": "GuildTextChat",
+    "categoryId": "1474024566945742898",
+    "category": "Text Channels",
+    "name": "general",
+    "topic": null
+  },
+  "dateRange": {
+    "after": "2026-01-01T00:00:00+02:00",
+    "before": null
+  },
+  "exportedAt": "2026-02-25T00:10:47.973359+02:00",
+  "messages": [
+    {
+      "id": "1474186795808985219",
+      "type": "GuildMemberJoin",
+      "timestamp": "2026-02-20T01:32:01.187+02:00",
+      "timestampEdited": null,
+      "callEndedTimestamp": null,
+      "isPinned": false,
+      "content": "Joined the server.",
+      "author": {
+        "id": "1474184262033870848",
+        "name": "Pi5-Rumi-bot",
+        "discriminator": "4498",
+        "nickname": "Pi5-Rumi-bot",
+        "color": null,
+        "isBot": true,
+        "roles": [
+          {
+            "id": "1474186794999349251",
+            "name": "Pi5-Rumi-bot",
+            "color": null,
+            "position": 1
+          }
+        ],
+        "avatarUrl": "https://cdn.discordapp.com/embed/avatars/3.png"
+      },
+      "attachments": [],
+      "embeds": [],
+      "stickers": [],
+      "reactions": [],
+      "mentions": [],
+      "inlineEmojis": []
+    },
+    {
+      "id": "1474189052390408253",
+      "type": "GuildMemberJoin",
+      "timestamp": "2026-02-20T01:40:59.198+02:00",
+      "timestampEdited": null,
+      "callEndedTimestamp": null,
+      "isPinned": false,
+      "content": "Joined the server.",
+      "author": {
+        "id": "1474188304315318334",
+        "name": "Pi5-diogenes-bot",
+        "discriminator": "4284",
+        "nickname": "Pi5-diogenes-bot",
+        "color": null,
+        "isBot": true,
+        "roles": [
+          {
+            "id": "1474189051992080529",
+            "name": "Pi5-diogenes-bot",
+            "color": null,
+            "position": 1
+          }
+        ],
+        "avatarUrl": "https://cdn.discordapp.com/embed/avatars/4.png"
+      },
+      "attachments": [],
+      "embeds": [],
+      "stickers": [],
+      "reactions": [
+        {
+          "emoji": {
+            "id": "",
+            "name": "\uD83D\uDC4D",
+            "code": "thumbsup",
+            "isAnimated": false,
+            "imageUrl": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f44d.svg"
+          },
+          "count": 1,
+          "users": [
+            {
+              "id": "1146877722191212574",
+              "name": "jwadding_15931",
+              "discriminator": "0000",
+              "nickname": "jwadding | Jack",
+              "color": null,
+              "isBot": false,
+              "avatarUrl": "https://cdn.discordapp.com/avatars/1146877722191212574/f16281539e2c685b5158567afae1d8f6.png?size=512"
+            }
+          ]
+        }
+      ],
+      "mentions": [],
+      "inlineEmojis": []
+    },
+    {
+      "id": "1474189722665484298",
+      "type": "GuildMemberJoin",
+      "timestamp": "2026-02-20T01:43:39.004+02:00",
+      "timestampEdited": null,
+      "callEndedTimestamp": null,
+      "isPinned": false,
+      "content": "Joined the server.",
+      "author": {
+        "id": "1474189267445092384",
+        "name": "Pi5-Marcus-Aurelius-bot",
+        "discriminator": "0719",
+        "nickname": "Pi5-Marcus-Aurelius-bot",
+        "color": null,
+        "isBot": true,
+        "roles": [
+          {
+            "id": "1474189721897926786",
+            "name": "Pi5-Marcus-Aurelius-bot",
+            "color": null,
+            "position": 1
+          }
+        ],
+        "avatarUrl": "https://cdn.discordapp.com/embed/avatars/4.png"
+      },
+      "attachments": [],
+      "embeds": [],
+      "stickers": [],
+      "reactions": [],
+      "mentions": [],
+      "inlineEmojis": []
+    }
+  ],
+  "messageCount": 3
+}

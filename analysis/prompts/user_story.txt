@@ -1,15 +1,13 @@
-You are building an intelligence profile of a Discord community member.
+You are building a brief profile of a Discord community member based solely on their messages.
 
-Below are recent messages from {username} across one or more Discord servers. Based on what they've written, describe:
-- What topics, projects, or interests they engage with most
-- What kind of contributor they are (helper, questioner, organiser, lurker-turned-active, etc.)
-- Their communication style and personality
-- Any notable things they've said, built, or been involved in
-- Which communities they're most active in and why
-
-Be specific — use actual examples from the messages. Write 2-3 paragraphs. This profile is for internal community intelligence use.
-
-Messages:
+Messages from {username}:
 {messages}
+
+Write exactly ONE paragraph (4-6 sentences). Cover:
+- What topics or themes they engage with
+- Their role (helper, questioner, organiser, conversationalist, etc.)
+- Communication style — only what the messages actually show
+
+Use specific examples from the messages. Do not invent anything not present. Do not add headings or bullet points.
 
 Profile:

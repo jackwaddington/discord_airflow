@@ -1,0 +1,22 @@
+{
+  "guild": {
+    "id": "1474024565419147317",
+    "name": "\uD83C\uDFDB theAgora",
+    "iconUrl": "https://cdn.discordapp.com/icons/1474024565419147317/94c883bd3ad9c8f4575f24c55939d44b.png?size=512"
+  },
+  "channel": {
+    "id": "1474028966477172747",
+    "type": "GuildTextChat",
+    "categoryId": "1474028774860525729",
+    "category": "\uD83C\uDFDB️ THE CITY SQUARE",
+    "name": "observer-logs",
+    "topic": null
+  },
+  "dateRange": {
+    "after": "2026-01-01T00:00:00+02:00",
+    "before": null
+  },
+  "exportedAt": "2026-02-25T00:10:57.461938+02:00",
+  "messages": [],
+  "messageCount": 0
+}
