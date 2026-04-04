@@ -226,12 +226,142 @@ def compute_trends(**context) -> dict:
     return trends
 
 
+def security_scan(**context) -> dict:
+    """
+    Scan all servers for suspicious link activity in the reporting window.
+
+    Flags:
+    - External links (Google Drive, Docs, shortlinks) posted by accounts
+      that have since been deleted
+    - Shortlinks (bit.ly, tinyurl, shorturl) — destination is hidden
+    - Any links posted by accounts created less than 7 days before posting
+
+    Pure SQL — no LLM. Results pushed to XCom for save_report.
+    """
+    import psycopg2
+    import psycopg2.extras
+
+    dsn = (
+        f"host={os.getenv('DB_HOST', 'host.docker.internal')} "
+        f"port={os.getenv('DB_PORT', '5432')} "
+        f"dbname={os.getenv('DB_NAME', 'discord_data')} "
+        f"user={os.getenv('DB_USER', 'discord_user')} "
+        f"password={os.getenv('DB_PASSWORD', '')}"
+    )
+
+    days = int(context["dag_run"].conf.get("days", 7))
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = True
+
+    def q(sql, params=()):
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            return [dict(r) for r in cur.fetchall()]
+
+    # 1. Links from deleted accounts (all time — these don't expire)
+    deleted_links = q(
+        """
+        SELECT
+            s.server_name,
+            m.channel_name,
+            u.current_username,
+            m.created_at::date AS date,
+            regexp_matches(m.content, 'https?://[^\\s<>"]+', 'g') AS url
+        FROM messages m
+        JOIN servers s ON m.server_id = s.server_id
+        JOIN users u ON m.user_id = u.user_id
+        WHERE m.is_deleted = false
+          AND u.current_username ILIKE '%%deleted%%'
+          AND (
+            m.content ILIKE '%%drive.google.com%%'
+            OR m.content ILIKE '%%docs.google.com%%'
+            OR m.content ILIKE '%%bit.ly%%'
+            OR m.content ILIKE '%%tinyurl%%'
+            OR m.content ILIKE '%%shorturl%%'
+          )
+        ORDER BY m.created_at DESC
+        """
+    )
+
+    # 2. Shortlinks posted this period (destination unknown)
+    shortlinks = q(
+        """
+        SELECT
+            s.server_name,
+            m.channel_name,
+            u.current_username,
+            m.created_at::date AS date,
+            regexp_matches(m.content, 'https?://(?:bit\\.ly|tinyurl\\.com|shorturl\\.at)/[^\\s<>"]+', 'g') AS url
+        FROM messages m
+        JOIN servers s ON m.server_id = s.server_id
+        JOIN users u ON m.user_id = u.user_id
+        WHERE m.is_deleted = false
+          AND m.created_at > NOW() - (%s * INTERVAL '1 day')
+          AND (
+            m.content ILIKE '%%bit.ly%%'
+            OR m.content ILIKE '%%tinyurl%%'
+            OR m.content ILIKE '%%shorturl%%'
+          )
+        ORDER BY m.created_at DESC
+        """,
+        (days,)
+    )
+
+    # 3. Links from brand-new accounts (created <7 days before their post)
+    new_account_links = q(
+        """
+        SELECT
+            s.server_name,
+            m.channel_name,
+            u.current_username,
+            u.created_at::date AS account_created,
+            m.created_at::date AS date,
+            regexp_matches(m.content, 'https?://[^\\s<>"]+', 'g') AS url
+        FROM messages m
+        JOIN servers s ON m.server_id = s.server_id
+        JOIN users u ON m.user_id = u.user_id
+        WHERE m.is_deleted = false
+          AND m.created_at > NOW() - (%s * INTERVAL '1 day')
+          AND m.created_at - u.created_at < INTERVAL '7 days'
+          AND (
+            m.content ILIKE '%%drive.google.com%%'
+            OR m.content ILIKE '%%docs.google.com%%'
+            OR m.content ILIKE '%%bit.ly%%'
+            OR m.content ILIKE '%%tinyurl%%'
+            OR m.content ILIKE '%%shorturl%%'
+          )
+        ORDER BY m.created_at DESC
+        """,
+        (days,)
+    )
+
+    conn.close()
+
+    results = {
+        "deleted_account_links": [
+            {k: str(v) for k, v in r.items()} for r in deleted_links
+        ],
+        "shortlinks": [
+            {k: str(v) for k, v in r.items()} for r in shortlinks
+        ],
+        "new_account_links": [
+            {k: str(v) for k, v in r.items()} for r in new_account_links
+        ],
+    }
+
+    total = sum(len(v) for v in results.values())
+    print(f"Security scan complete: {total} flags across 3 categories")
+    context["ti"].xcom_push(key="security", value=results)
+    return results
+
+
 def save_report(**context) -> None:
     """
     Pull stats from XCom and write a markdown report to reports/.
     """
     stats = context["ti"].xcom_pull(task_ids="compute_stats", key="stats")
     trends = context["ti"].xcom_pull(task_ids="compute_trends", key="trends") or {}
+    security = context["ti"].xcom_pull(task_ids="security_scan", key="security") or {}
     if not stats:
         raise ValueError("No stats received from compute_stats task")
 
@@ -283,6 +413,42 @@ def save_report(**context) -> None:
                 lines.append(f"| {t['week']} | {t['posts']} | {t['unique_users']} |")
             lines.append("")
 
+    # ── Security scan section ─────────────────────────────────────────────────
+    deleted = security.get("deleted_account_links", [])
+    shortlinks = security.get("shortlinks", [])
+    new_acct = security.get("new_account_links", [])
+
+    lines.append("\n---\n")
+    lines.append("# Security Scan\n")
+    lines.append("_Pure SQL — flags links that warrant manual review._\n")
+
+    lines.append("\n## Links from deleted accounts\n")
+    if deleted:
+        lines.append("| Date | Server | Channel | User | URL |")
+        lines.append("| ---- | ------ | ------- | ---- | --- |")
+        for r in deleted:
+            lines.append(f"| {r['date']} | {r['server_name']} | #{r['channel_name']} | {r['current_username']} | {str(r['url'])} |")
+    else:
+        lines.append("_None found._")
+
+    lines.append("\n## Shortlinks (destination hidden)\n")
+    if shortlinks:
+        lines.append("| Date | Server | Channel | User | URL |")
+        lines.append("| ---- | ------ | ------- | ---- | --- |")
+        for r in shortlinks:
+            lines.append(f"| {r['date']} | {r['server_name']} | #{r['channel_name']} | {r['current_username']} | {str(r['url'])} |")
+    else:
+        lines.append("_None found._")
+
+    lines.append("\n## Links from brand-new accounts (<7 days old)\n")
+    if new_acct:
+        lines.append("| Date | Server | Channel | User | Account created | URL |")
+        lines.append("| ---- | ------ | ------- | ---- | --------------- | --- |")
+        for r in new_acct:
+            lines.append(f"| {r['date']} | {r['server_name']} | #{r['channel_name']} | {r['current_username']} | {r['account_created']} | {str(r['url'])} |")
+    else:
+        lines.append("_None found._")
+
     report = "\n".join(lines)
 
     output_dir = Path("/opt/airflow/reports")
@@ -318,9 +484,14 @@ with DAG(
     )
 
     t3 = PythonOperator(
+        task_id="security_scan",
+        python_callable=security_scan,
+    )
+
+    t4 = PythonOperator(
         task_id="save_report",
         python_callable=save_report,
     )
 
-    # stats and trends run in parallel, save_report waits for both
-    [t1, t2] >> t3
+    # all three run in parallel, save_report waits for all
+    [t1, t2, t3] >> t4

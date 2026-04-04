@@ -395,6 +395,63 @@ class QueryBuilder:
             (f"%{username}%",),
         )
 
+    def weekly_active_users(self, server_id: int) -> list[dict]:
+        """
+        Count distinct active users per calendar week for a server.
+
+        Returns one row per week (ISO week, Monday start), ordered newest-first.
+        Useful for spotting community growth, seasonal dips, or churn.
+
+        Returns rows with: week_start, active_users, total_messages
+        """
+        return self._execute(
+            """
+            SELECT
+                DATE_TRUNC('week', m.created_at)::DATE AS week_start,
+                COUNT(DISTINCT m.user_id)              AS active_users,
+                COUNT(m.message_id)                    AS total_messages
+            FROM messages m
+            WHERE m.server_id = %s
+              AND m.is_deleted = false
+            GROUP BY DATE_TRUNC('week', m.created_at)
+            ORDER BY week_start DESC
+            """,
+            (server_id,),
+        )
+
+    def channel_all_messages(
+        self,
+        server_id: int,
+        channel_name: str,
+        limit: int = 5000,
+    ) -> list[dict]:
+        """
+        Get all non-deleted messages from a channel by name, oldest-first.
+
+        Used for bulk extraction (e.g. pulling every event announcement).
+
+        Returns rows with: message_id, created_at, author, content
+        """
+        return self._execute(
+            """
+            SELECT
+                m.message_id,
+                m.created_at,
+                u.current_username AS author,
+                m.content
+            FROM messages m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.server_id = %s
+              AND m.channel_name = %s
+              AND m.is_deleted = false
+              AND m.content IS NOT NULL
+              AND m.content != ''
+            ORDER BY m.created_at ASC
+            LIMIT %s
+            """,
+            (server_id, channel_name, limit),
+        )
+
     def all_servers(self) -> list[dict]:
         """
         Return all servers in the database.

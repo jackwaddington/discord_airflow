@@ -17,6 +17,7 @@ __pycache__/
 
 # Discord data (never commit real data)
 reports/*.md
+exports/
 collectors/exports/
 collectors/bin/
 

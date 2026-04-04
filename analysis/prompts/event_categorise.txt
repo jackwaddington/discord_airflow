@@ -1,0 +1,28 @@
+You are categorising community events from a tech education space (Hive Helsinki, a coding school).
+
+Below is a list of events. For each event, assign ONE category from this list:
+- tech        (workshops, talks, coding sprints, hackathons, AI/software topics)
+- sports      (football, volleyball, basketball, running, climbing, tennis, swimming)
+- social      (parties, gatherings, gala, networking, food/drink events, market)
+- gaming      (game nights, game of the month, fighting games, magic the gathering, mafia, werewolves)
+- learning    (study groups, book club, language cafe, career resources, public speaking)
+- induction   (orientation, onboarding, piscine, evaluations, exams)
+- creative    (music, art, film/kino, 3D printing, electronics, hardware)
+- wellness    (meditation, yoga, mindfulness, mental health)
+- other       (anything that does not fit the above)
+
+Events:
+{events}
+
+Reply ONLY with a JSON array. Each item must have exactly these fields:
+- "title": the event title (copy exactly from input)
+- "date": the date string (copy exactly from input)
+- "category": one category from the list above
+
+Example output:
+[
+  {"title": "Demo Thursday", "date": "2026-02-12", "category": "tech"},
+  {"title": "Beach Volleyball", "date": "2025-06-10", "category": "sports"}
+]
+
+Output ONLY the JSON array. No explanation, no markdown fences.
