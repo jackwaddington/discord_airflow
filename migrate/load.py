@@ -140,7 +140,8 @@ def copy_pg(db, schema, url):
             with s.copy(f'copy public."{t}" to stdout') as out, c.copy(f'copy "{schema}"."{t}" from stdin') as inp:
                 for chunk in out:
                     inp.write(chunk)
-            check = "select count(*), md5(coalesce(string_agg(x::text, E'\\n' order by x::text), '')) from {} x"
+            check = "select count(*), md5(coalesce(string_agg(row_to_json(x)::text, E'\\n' order by row_to_json(x)::text collate \"C\"), '')) from {} x"
+            # json + byte order: row text (x::text) quotes values by the OS's isspace(), which differs Mac vs Linux on emoji bytes
             s.execute(check.format(f'public."{t}"'))
             c.execute(check.format(f'"{schema}"."{t}"'))
             a, b = s.fetchone(), c.fetchone()
