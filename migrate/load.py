@@ -2,6 +2,8 @@
 
     DATABASE_URL=postgresql://discord:...@192.168.0.83:5463/discord python migrate/load.py ~/github
 
+    DATABASE_URL=... python migrate/load.py ~/github --exports discord_airflow/exports/<run>/<guild>   (a new collect run only)
+
 Safe to re-run (raw rows are upserts, legacy copies are dropped and recopied). Exits non-zero if the
 reconciliation finds anything missing. What goes where:
   raw.export_file       one row per DiscordChatExporter JSON file (header + sha256), incl. a salvaged truncated one
@@ -67,9 +69,9 @@ def read_export(text):
     return doc, err
 
 
-def load_exports(db):
+def load_exports(db, dirs=EXPORT_DIRS):
     files, versions, json_ids = [], {}, set()
-    for d in EXPORT_DIRS:
+    for d in dirs:
         for p in sorted((ROOT / d).rglob("*.json")):
             b = p.read_bytes()
             doc, err = read_export(b.decode("utf-8"))
@@ -158,7 +160,22 @@ def q(name):
     return '"' + name.replace('"', '""') + '"'
 
 
+def load_new(dirs):
+    """--exports mode: load only these export folders (a fresh collect run) and check every message landed."""
+    with psycopg.connect(os.environ["DATABASE_URL"]) as db:
+        db.execute(DDL)
+        db.commit()
+        files, versions, json_ids = load_exports(db, dirs)
+        db_ids = {r[0] for r in db.execute("select message_id from raw.message_version where message_id = any(%s)", (list(json_ids),))}
+        missing = json_ids - db_ids
+        print(f"reconcile: {len(json_ids)} messages in these files, {len(missing)} missing")
+        if missing:
+            raise SystemExit("RECONCILIATION FAILED")
+
+
 def main():
+    if "--exports" in sys.argv:
+        return load_new(sys.argv[sys.argv.index("--exports") + 1:])
     with psycopg.connect(os.environ["DATABASE_URL"]) as db:
         db.execute(DDL)
         db.commit()
